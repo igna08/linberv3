@@ -17,12 +17,12 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
 
-# Configuración de tokens de acceso
-access_token = os.getenv('ACCESS_TOKEN')  # Utiliza variable de entorno para el token de acceso
+access_token = os.getenv('ACCESS_TOKEN')  # Token de acceso para WhatsApp
 verify_token = os.getenv('VERIFY_TOKEN')
 phone_number_id = os.getenv('PHONE_NUMBER_ID')
+instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')  # Token de acceso para Instagram
 total_conversations = 0
-admin_password = '12345' # Utiliza variable de entorno para la contraseña de admin
+admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 
 @app.route("/")
 def home():
@@ -91,9 +91,9 @@ def send_whatsapp_message(user_id, text):
     requests.post(url, headers=headers, json=data)
 
 def send_instagram_message(user_id, text):
-    url = f"https://graph.facebook.com/v19.0/me/messages"
+    url = "https://graph.facebook.com/v19.0/me/messages"
     headers = {
-        "Authorization": f"Bearer {access_token}",
+        "Authorization": f"Bearer {instagram_access_token}",
         "Content-Type": "application/json"
     }
     data = {
@@ -103,7 +103,7 @@ def send_instagram_message(user_id, text):
     requests.post(url, headers=headers, json=data)
 
 def send_messenger_message(user_id, text):
-    url = f"https://graph.facebook.com/v19.0/me/messages"
+    url = "https://graph.facebook.com/v19.0/me/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
