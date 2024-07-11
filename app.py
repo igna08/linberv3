@@ -139,7 +139,7 @@ def process_user_input(user_input):
         else:
             # Conversación normal con OpenAI GPT-4
             response = openai.ChatCompletion.create(
-                model="gpt-3-0125",  # GPT-4 model
+                model="gpt-3.5-turbo-0125",  # GPT-4 model
                 messages=session['messages']
             )
             bot_message = response.choices[0].message['content'].strip()
