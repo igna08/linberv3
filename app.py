@@ -23,6 +23,7 @@ phone_number_id = os.getenv('PHONE_NUMBER_ID')
 instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')  # Token de acceso para Instagram
 total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
+instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
 @app.route("/")
 def home():
@@ -91,7 +92,7 @@ def send_whatsapp_message(user_id, text):
     requests.post(url, headers=headers, json=data)
 
 def send_instagram_message(user_id, text):
-    url = "https://graph.facebook.com/v19.0/me/messages"
+    url = f"https://graph.facebook.com/v19.0/{instagram_user_id}/messages"
     headers = {
         "Authorization": f"Bearer {instagram_access_token}",
         "Content-Type": "application/json"
@@ -100,7 +101,9 @@ def send_instagram_message(user_id, text):
         "recipient": {"id": user_id},
         "message": {"text": text}
     }
-    requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
+    print(response.status_code)
+    print(response.json())
 
 def send_messenger_message(user_id, text):
     url = "https://graph.facebook.com/v19.0/me/messages"
