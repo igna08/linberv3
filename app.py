@@ -8,7 +8,7 @@ import spacy
 
 
 # Configuración inicial
-openai.api_key = 'sk-proj-t2n2fig1cNA7sKc7subvT3BlbkFJv4vJNXnubj2fFknPu7lJ'   # Asegúrate de configurar tu variable de entorno
+openai.api_key = os.getenv('OPENAI_API_KEY')  # Asegúrate de configurar tu variable de entorno
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 CORS(app, resources={r"/*": {"origins": "*"}})
