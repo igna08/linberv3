@@ -25,6 +25,11 @@ total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
+
+# Leer el contexto inicial desde el archivo de texto
+with open('initial_context.txt', 'r') as file:
+    initial_context = file.read().strip()
+ 
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -121,12 +126,12 @@ def process_user_input(user_input):
     # Obtener o inicializar la lista de mensajes
     if 'messages' not in session:
         session['messages'] = [
-            {"role": "system", "content": "You are an assistant at Surcan, a Family company located in the heart of Apóstoles, city of Misiones with more than 40 years of experience in the construction field. Be kind and friendly."}
+            {"role": "system", "content": initial_context}
         ]
 
     # Añadir el mensaje del usuario a la lista de mensajes
     session['messages'].append({"role": "user", "content": user_input})
-
+ 
     try:
         # Utilizar GPT-4 para detectar frases donde el usuario busca un producto
         if is_product_search_intent(user_input):
