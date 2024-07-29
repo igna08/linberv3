@@ -134,15 +134,7 @@ def process_user_input(user_input):
  
     try:
         # Utilizar GPT-4 para detectar frases donde el usuario busca un producto
-        if is_product_search_intent(user_input):
-            product_name = extract_product_name(user_input)
-            products = search_product_in_shopify(product_name)
-
-            if products:
-                product_messages = [f"Here is some information about {product['title']}: {product['body_html']}" for product in products]
-                bot_message = " ".join(product_messages)
-            else:
-                bot_message = f"I couldn't find information about '{product_name}'. Please check back later."
+        
 
         else:
             # Conversación normal con OpenAI GPT-4
