@@ -122,6 +122,7 @@ def send_messenger_message(user_id, text):
     }
     requests.post(url, headers=headers, json=data)
 
+
 def process_user_input(user_input):
     # Obtener o inicializar la lista de mensajes
     if 'messages' not in session:
@@ -133,11 +134,11 @@ def process_user_input(user_input):
     session['messages'].append({"role": "user", "content": user_input})
  
     try:
-        # Utilizar GPT-4 para detectar frases donde el usuario busca un producto
-        
+        # Aquí se puede implementar la lógica para detectar frases donde el usuario busca un producto
+        # Por ejemplo, podrías usar una expresión regular o un modelo de NLP
 
-        else:
-            # Conversación normal con OpenAI GPT-4
+        # Lógica de conversación normal con OpenAI GPT-4
+        response
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo-0125",  # GPT-4 model
                 messages=session['messages']
