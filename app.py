@@ -138,7 +138,7 @@ def process_user_input(user_input):
         # Por ejemplo, podrías usar una expresión regular o un modelo de NLP
 
         # Lógica de conversación normal con OpenAI GPT-4
-        response
+        
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo-0125",  # GPT-4 model
                 messages=session['messages']
