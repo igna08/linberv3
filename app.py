@@ -132,18 +132,17 @@ def process_user_input(user_input):
 
     # Añadir el mensaje del usuario a la lista de mensajes
     session['messages'].append({"role": "user", "content": user_input})
- 
+
     try:
         # Aquí se puede implementar la lógica para detectar frases donde el usuario busca un producto
         # Por ejemplo, podrías usar una expresión regular o un modelo de NLP
 
         # Lógica de conversación normal con OpenAI GPT-4
-        
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-0125",  # GPT-4 model
-                messages=session['messages']
-            )
-            bot_message = response.choices[0].message['content'].strip()
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0301",  # GPT-4 model
+            messages=session['messages']
+        )
+        bot_message = response.choices[0].message['content'].strip()
 
         # Añadir el mensaje del bot a la lista de mensajes
         session['messages'].append({"role": "assistant", "content": bot_message})
