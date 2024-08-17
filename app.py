@@ -21,31 +21,30 @@ assistant_id = os.getenv("ASSISTANT_ID")
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
 
-access_token = os.getenv('ACCESS_TOKEN')  # Token de acceso para WhatsApp
+
+# Usar el asistente preexistente desde la variable de entorno
+assistant_id = os.getenv("ASSISTANT_ID")
+
+# Inicializar thread_id como None
+thread_id = None
+access_token = os.getenv('ACCESS_TOKEN')
 verify_token = os.getenv('VERIFY_TOKEN')
 phone_number_id = os.getenv('PHONE_NUMBER_ID')
-instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')  # Token de acceso para Instagram
-total_conversations = 0
-admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
-instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
-
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 app = Flask(__name__)
-
-# Configuración de Flask-Session
-app.config['SESSION_TYPE'] = 'filesystem'  # Puedes cambiar a 'redis', 'sqlalchemy', etc.
-app.config['SECRET_KEY'] = 'supersecretkey'  # Asegúrate de usar una clave secreta fuerte
+app.secret_key = os.urandom(24)
+CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['DEBUG'] = True
 
 # Inicializar la sesión
 Session(app)
 
-CORS(app, resources={r"/*": {"origins": "*"}})
-app.config['DEBUG'] = True
 
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
 
-thread_id = None
+
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
