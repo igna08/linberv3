@@ -131,6 +131,8 @@ def send_messenger_message(user_id, text):
     print(response.json())
 
 def process_user_input(user_input):
+    global thread_id
+
     # Revisa si ya existe un thread_id en la sesión
     if 'thread_id' not in session:
         print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
