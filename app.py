@@ -28,7 +28,21 @@ total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
+
+from flask import Flask, session
+from flask_session import Session
+
 app = Flask(__name__)
+
+# Configuración de Flask-Session
+app.config['SESSION_TYPE'] = 'filesystem'  # Puedes cambiar a 'redis', 'sqlalchemy', etc.
+app.config['SECRET_KEY'] = 'supersecretkey'  # Asegúrate de usar una clave secreta fuerte
+
+# Inicializar la sesión
+Session(app)
+
+
+
 app.secret_key = os.urandom(24)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['DEBUG'] = True
