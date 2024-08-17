@@ -1,43 +1,49 @@
-from gc import get_count
-import time
-import uuid
-from flask import Flask, request, jsonify, render_template, send_from_directory, session, make_response
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
+from flask_session import Session
 from openai import OpenAI
 import os
 import requests
-from bs4 import BeautifulSoup
 import spacy
-import sqlite3
-from datetime import datetime, timedelta
-from flask_session import Session  # Asegúrate de importar Flask-Session correctamente
+import time
 
 # Configuración inicial
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+app = Flask(__name__)
 
-# Usar el asistente preexistente desde la variable de entorno
+# Configuración de la clave secreta
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
+
+# Configuración de la sesión
+app.config['SESSION_TYPE'] = 'filesystem'  # O cualquier otro tipo como 'redis', 'sqlalchemy', etc.
+Session(app)
+
+# Configuración de CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Configuración de OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 assistant_id = os.getenv("ASSISTANT_ID")
 
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
 
-
-# Usar el asistente preexistente desde la variable de entorno
-assistant_id = os.getenv("ASSISTANT_ID")
-
-# Inicializar thread_id como None
-thread_id = None
+# Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
 verify_token = os.getenv('VERIFY_TOKEN')
 phone_number_id = os.getenv('PHONE_NUMBER_ID')
+instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
+instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
-CORS(app, resources={r"/*": {"origins": "*"}})
-app.config['DEBUG'] = True
 
-# Inicializar la sesión
-Session(app)
+# Leer el contexto inicial desde el archivo de texto
+with open('initial_context.txt', 'r') as file:
+    initial_context = file.read().strip()
+
+# Inicializar thread_id como None
+thread_id = None
+
+# Rutas y funciones van aquí...
+
 
 
 # Leer el contexto inicial desde el archivo de texto
