@@ -16,7 +16,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Usar el asistente preexistente desde la variable de entorno
 assistant_id = os.getenv("ASSISTANT_ID")
-thread_id = None
 
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
@@ -37,6 +36,7 @@ app.config['DEBUG'] = True
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
+thread_id = None
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -131,6 +131,7 @@ def send_messenger_message(user_id, text):
     print(response.json())
 
 def process_user_input(user_input):
+    # Revisa si ya existe un thread_id en la sesión
     if 'thread_id' not in session:
         print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
