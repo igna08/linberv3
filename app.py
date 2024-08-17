@@ -11,19 +11,12 @@ import spacy
 import sqlite3
 from datetime import datetime, timedelta
 
-
-
-
 # Configuración inicial
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
 
 # Usar el asistente preexistente desde la variable de entorno
 assistant_id = os.getenv("ASSISTANT_ID")
 
-# Inicializar thread_id como None
-thread_id = None
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
 
@@ -39,16 +32,10 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['DEBUG'] = True
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
-CORS(app, resources={r"/*": {"origins": "*"}})
-app.config['DEBUG'] = True
 
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
- 
-
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -110,7 +97,9 @@ def send_whatsapp_message(user_id, text):
         "type": "text",
         "text": {"body": text}
     }
-    requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
+    print(response.status_code)
+    print(response.json())
 
 def send_instagram_message(user_id, text):
     url = f"https://graph.facebook.com/v19.0/{instagram_user_id}/messages"
@@ -136,10 +125,11 @@ def send_messenger_message(user_id, text):
         "recipient": {"id": user_id},
         "message": {"text": text}
     }
-    requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
+    print(response.status_code)
+    print(response.json())
 
 def process_user_input(user_input):
-    # Revisa si ya existe un thread_id en la sesión
     if 'thread_id' not in session:
         print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
@@ -150,7 +140,6 @@ def process_user_input(user_input):
 
     thread_id = session['thread_id']
 
-    # Envía la entrada del usuario al hilo existente
     print(f"[DEBUG] Enviando entrada del usuario al thread_id: {thread_id}")
     client.beta.threads.messages.create(
         thread_id=thread_id,
@@ -159,7 +148,6 @@ def process_user_input(user_input):
     )
     print(f"[DEBUG] Entrada del usuario enviada: {user_input}")
 
-    # Ejecuta la conversación
     print("[DEBUG] Ejecutando conversación con el asistente...")
     run = client.beta.threads.runs.create(
         assistant_id=assistant_id,
@@ -168,7 +156,6 @@ def process_user_input(user_input):
     run_id = run.id
     print(f"[DEBUG] Run creado con run_id: {run_id}")
 
-    # Espera a que la ejecución se complete
     while True:
         run = client.beta.threads.runs.retrieve(
             thread_id=thread_id,
@@ -178,18 +165,15 @@ def process_user_input(user_input):
         if run.status == 'completed':
             print("[DEBUG] Ejecución completada.")
             break
-        time.sleep(3)  # Espera 3 segundos antes de volver a verificar
+        time.sleep(3)
 
-    # Recupera los mensajes del hilo para obtener la respuesta del asistente
     print("[DEBUG] Recuperando mensajes del hilo...")
     output_messages = client.beta.threads.messages.list(
         thread_id=thread_id
     )
 
-    # Depuración de todos los mensajes obtenidos
     print(f"[DEBUG] Mensajes recuperados: {output_messages.data}")
 
-    # Usa el primer mensaje devuelto para la respuesta del asistente
     if output_messages.data:
         print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
         bot_message = output_messages.data[0].content[0].text.value
@@ -198,64 +182,14 @@ def process_user_input(user_input):
         bot_message = "Lo siento, no pude obtener una respuesta en este momento."
         print("[DEBUG] No se encontraron mensajes del asistente.")
 
-
-        return bot_message
-
-
-def is_product_search_intent(user_input):
-    # Analiza el texto del usuario
-    doc = nlp(user_input.lower())
-    # Busca patrones en la frase que indiquen una intención de búsqueda
-    for token in doc:
-        if token.lemma_ in ["buscar", "necesitar", "querer"] and token.pos_ == "VERB":
-            return True
-    return False
-
-def extract_product_name(user_input):
-    # Analiza el texto del usuario
-    doc = nlp(user_input.lower())
-    product_name = []
-    is_searching = False
-    for token in doc:
-        # Detectar la frase de búsqueda
-        if token.lemma_ in ["buscar", "necesitar", "querer"] and token.pos_ == "VERB":
-            is_searching = True
-        # Extraer sustantivos después del verbo de búsqueda
-        if is_searching and token.pos_ in ["NOUN", "PROPN"]:
-            product_name.append(token.text)
-    return " ".join(product_name)
-
- 
-
-# Función para buscar un producto en Shopify
-def search_product_in_shopify(product_name):
-    shopify_api_url = 'https://surcansa.myshopify.com/api/2023-07/products.json'  # Reemplaza con tu URL de API de Shopify
-    headers = {
-        'X-Shopify-Access-Token': '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',
-        'Content-Type': 'application/json'
-    }
-    params = {
-        'title': product_name
-    }
-
-    try:
-        response = requests.get(shopify_api_url, headers=headers, params=params)
-        if response.status_code == 200:
-            products = response.json()['products']
-            if products:
-                return products  # Devuelve todos los productos encontrados
-            else:
-                return []
-        else:
-            return []
-    except Exception as e:
-        print(f"Error fetching product from Shopify: {str(e)}")
-        return []
+    return bot_message
 
 @app.route('/reset', methods=['POST'])
 def reset():
     session.pop('messages', None)
+    session.pop('thread_id', None)
     return jsonify({'status': 'session reset'})
 
 if __name__ == "__main__":
     app.run(debug=True)
+
