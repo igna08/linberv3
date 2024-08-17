@@ -7,3 +7,4 @@ beautifulsoup4==4.12.2
 gunicorn==22.0.0
 numpy==1.24.1
 thinc==8.1.9
+Flask-Session==0.4.0
