@@ -16,6 +16,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Usar el asistente preexistente desde la variable de entorno
 assistant_id = os.getenv("ASSISTANT_ID")
+thread_id = None
 
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
