@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 import spacy
 import sqlite3
 from datetime import datetime, timedelta
+from flask_session import Session  # Asegúrate de importar Flask-Session correctamente
 
 # Configuración inicial
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -28,10 +29,6 @@ total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
-
-from flask import Flask, session
-from flask_session import Session
-
 app = Flask(__name__)
 
 # Configuración de Flask-Session
@@ -41,15 +38,13 @@ app.config['SECRET_KEY'] = 'supersecretkey'  # Asegúrate de usar una clave secr
 # Inicializar la sesión
 Session(app)
 
-
-
-app.secret_key = os.urandom(24)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['DEBUG'] = True
 
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
+
 thread_id = None
 
 @app.route('/webhook', methods=['GET', 'POST'])
@@ -210,4 +205,3 @@ def reset():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
