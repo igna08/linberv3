@@ -1,48 +1,34 @@
-from flask import Flask, request, jsonify, session
+
+from flask import Flask, request, jsonify, render_template, send_from_directory, session, make_response
 from flask_cors import CORS
-from flask_session import Session
 from openai import OpenAI
 import os
 import requests
+from bs4 import BeautifulSoup
 import spacy
-import time
+
+from datetime import datetime, timedelta
+
+
 
 # Configuración inicial
-app = Flask(__name__)
-
-# Configuración de la clave secreta
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
-
-# Configuración de la sesión
-app.config['SESSION_TYPE'] = 'filesystem'  # O cualquier otro tipo como 'redis', 'sqlalchemy', etc.
-Session(app)
-
-# Configuración de CORS
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# Configuración de OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+
+# Usar el asistente preexistente desde la variable de entorno
 assistant_id = os.getenv("ASSISTANT_ID")
-
-# Cargar el modelo de lenguaje en español
-nlp = spacy.load("es_core_news_md")
-
-# Variables de entorno para WhatsApp e Instagram
-access_token = os.getenv('ACCESS_TOKEN')
-verify_token = os.getenv('VERIFY_TOKEN')
-phone_number_id = os.getenv('PHONE_NUMBER_ID')
-instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
-instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
-
-# Leer el contexto inicial desde el archivo de texto
-with open('initial_context.txt', 'r') as file:
-    initial_context = file.read().strip()
 
 # Inicializar thread_id como None
 thread_id = None
-
-# Rutas y funciones van aquí...
+access_token = os.getenv('ACCESS_TOKEN')
+verify_token = os.getenv('VERIFY_TOKEN')
+phone_number_id = os.getenv('PHONE_NUMBER_ID')
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['DEBUG'] = True
 
 
 
@@ -145,10 +131,9 @@ def send_messenger_message(user_id, text):
     print(response.json())
 
 def process_user_input(user_input):
-    global thread_id
 
-    # Revisa si ya existe un thread_id en la sesión
-    if 'thread_id' not in session:
+
+   if 'thread_id' not in session:
         print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
         session['thread_id'] = new_thread.id
