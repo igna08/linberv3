@@ -1,42 +1,45 @@
 
-from flask import Flask, request, jsonify, render_template, send_from_directory, session, make_response
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
-from openai import OpenAI
+from flask_session import Session
 import os
 import requests
-from bs4 import BeautifulSoup
 import spacy
-
-from datetime import datetime, timedelta
-
-
+import time
+from openai import OpenAI
 
 # Configuración inicial
+app = Flask(__name__)
+
+# Configuración de la clave secreta
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
+
+# Configuración de la sesión
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_COOKIE_NAME'] = 'my_session_cookie'
+Session(app)
+
+# Configuración de CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Configuración de OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
-
-# Usar el asistente preexistente desde la variable de entorno
 assistant_id = os.getenv("ASSISTANT_ID")
 
-# Inicializar thread_id como None
-thread_id = None
+# Cargar el modelo de lenguaje en español
+nlp = spacy.load("es_core_news_md")
+
+# Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
 verify_token = os.getenv('VERIFY_TOKEN')
 phone_number_id = os.getenv('PHONE_NUMBER_ID')
+instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
+instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
-CORS(app, resources={r"/*": {"origins": "*"}})
-app.config['DEBUG'] = True
-
-
 
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
-
-
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -71,19 +74,19 @@ def webhook():
 def handle_whatsapp_message(message):
     user_id = message['from']
     user_text = message['text']['body']
-    response_text = process_user_input(user_text)
+    response_text = process_user_input(user_id, user_text)
     send_whatsapp_message(user_id, response_text)
 
 def handle_instagram_message(message):
     user_id = message['sender']['id']
     user_text = message['message']['text']
-    response_text = process_user_input(user_text)
+    response_text = process_user_input(user_id, user_text)
     send_instagram_message(user_id, response_text)
 
 def handle_messenger_message(message):
     user_id = message['sender']['id']
     user_text = message['message']['text']
-    response_text = process_user_input(user_text)
+    response_text = process_user_input(user_id, user_text)
     send_messenger_message(user_id, response_text)
 
 def send_whatsapp_message(user_id, text):
@@ -130,18 +133,20 @@ def send_messenger_message(user_id, text):
     print(response.status_code)
     print(response.json())
 
-def process_user_input(user_input):
+def process_user_input(user_id, user_input):
+    # Usar un identificador único por usuario si es necesario
+    session_key = f'thread_id_{user_id}'
 
-
-   if 'thread_id' not in session:
-        print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
+    # Revisa si ya existe un thread_id en la sesión
+    if session_key not in session:
+        print(f"[DEBUG] No se encontró {session_key} en la sesión. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
-        session['thread_id'] = new_thread.id
-        print(f"[DEBUG] Nuevo thread_id creado: {session['thread_id']}")
+        session[session_key] = new_thread.id
+        print(f"[DEBUG] Nuevo {session_key} creado: {session[session_key]}")
     else:
-        print(f"[DEBUG] thread_id existente encontrado en la sesión: {session['thread_id']}")
+        print(f"[DEBUG] {session_key} existente encontrado en la sesión: {session[session_key]}")
 
-    thread_id = session['thread_id']
+    thread_id = session[session_key]
 
     print(f"[DEBUG] Enviando entrada del usuario al thread_id: {thread_id}")
     client.beta.threads.messages.create(
@@ -189,9 +194,4 @@ def process_user_input(user_input):
 
 @app.route('/reset', methods=['POST'])
 def reset():
-    session.pop('messages', None)
-    session.pop('thread_id', None)
-    return jsonify({'status': 'session reset'})
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    session.clear()  # Limpia todas las variables de sesión
