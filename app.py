@@ -16,7 +16,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
 
 # Configuración de la sesión
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_COOKIE_NAME'] = 'my_session_cookie'
+app.config['SESSION_COOKIE_NAME'] = 'igna0041'
 Session(app)
 
 # Configuración de CORS
