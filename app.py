@@ -191,15 +191,14 @@ def process_user_input(user_input):
     if output_messages.data:
         print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
         bot_message = output_messages.data[0].content[0].text.value
-        print(f"[DEBUG] Respuesta del asistente: {assistant_response}")
+        print(f"[DEBUG] Respuesta del asistente: {bot_message}")
     else:
         bot_message = "Lo siento, no pude obtener una respuesta en este momento."
         print("[DEBUG] No se encontraron mensajes del asistente.")
 
 
         return bot_message
-    except Exception as e:
-        return str(e)
+
 
 def is_product_search_intent(user_input):
     # Analiza el texto del usuario
