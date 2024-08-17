@@ -25,7 +25,6 @@ assistant_id = os.getenv("ASSISTANT_ID")
 # Inicializar thread_id como None
 thread_id = None
 # Cargar el modelo de lenguaje en español
-nlp = spacy.load("es_core_news_md")
 
 access_token = os.getenv('ACCESS_TOKEN')  # Token de acceso para WhatsApp
 verify_token = os.getenv('VERIFY_TOKEN')
