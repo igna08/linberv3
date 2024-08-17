@@ -48,9 +48,7 @@ app.config['DEBUG'] = True
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
  
-@app.route("/")
-def home():
-    return render_template("index.html")
+
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
