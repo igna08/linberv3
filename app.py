@@ -25,6 +25,7 @@ assistant_id = os.getenv("ASSISTANT_ID")
 # Inicializar thread_id como None
 thread_id = None
 # Cargar el modelo de lenguaje en español
+nlp = spacy.load("es_core_news_md")
 
 access_token = os.getenv('ACCESS_TOKEN')  # Token de acceso para WhatsApp
 verify_token = os.getenv('VERIFY_TOKEN')
@@ -34,6 +35,10 @@ total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['DEBUG'] = True
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 CORS(app, resources={r"/*": {"origins": "*"}})
