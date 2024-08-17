@@ -1,19 +1,29 @@
-import openai
+from gc import get_count
+import time
+import uuid
+from flask import Flask, request, jsonify, render_template, send_from_directory, session, make_response
+from flask_cors import CORS
+from openai import OpenAI
 import os
 import requests
-from flask import Flask, request, jsonify, render_template, send_from_directory, session
-from flask_cors import CORS
+from bs4 import BeautifulSoup
 import spacy
+import sqlite3
+from datetime import datetime, timedelta
+
 
 
 
 # Configuración inicial
-openai.api_key = os.getenv('OPENAI_API_KEY')  # Asegúrate de configurar tu variable de entorno
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
-CORS(app, resources={r"/*": {"origins": "*"}})
- # Esto iniciará ngrok cuando se ejecute la app
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+
+# Usar el asistente preexistente desde la variable de entorno
+assistant_id = os.getenv("ASSISTANT_ID")
+
+# Inicializar thread_id como None
+thread_id = None
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
 
@@ -25,6 +35,10 @@ total_conversations = 0
 admin_password = os.getenv('ADMIN_PASSWORD', '12345')  # Utiliza variable de entorno para la contraseña de admin
 instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+CORS(app, resources={r"/*": {"origins": "*"}})
+app.config['DEBUG'] = True
 
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
@@ -122,30 +136,66 @@ def send_messenger_message(user_id, text):
     }
     requests.post(url, headers=headers, json=data)
 
-
 def process_user_input(user_input):
-    # Obtener o inicializar la lista de mensajes
-    if 'messages' not in session:
-        session['messages'] = [
-            {"role": "system", "content": initial_context}
-        ]
+    # Revisa si ya existe un thread_id en la sesión
+    if 'thread_id' not in session:
+        print("[DEBUG] No se encontró thread_id en la sesión. Creando uno nuevo...")
+        new_thread = client.beta.threads.create()
+        session['thread_id'] = new_thread.id
+        print(f"[DEBUG] Nuevo thread_id creado: {session['thread_id']}")
+    else:
+        print(f"[DEBUG] thread_id existente encontrado en la sesión: {session['thread_id']}")
 
-    # Añadir el mensaje del usuario a la lista de mensajes
-    session['messages'].append({"role": "user", "content": user_input})
+    thread_id = session['thread_id']
 
-    try:
-        # Aquí se puede implementar la lógica para detectar frases donde el usuario busca un producto
-        # Por ejemplo, podrías usar una expresión regular o un modelo de NLP
+    # Envía la entrada del usuario al hilo existente
+    print(f"[DEBUG] Enviando entrada del usuario al thread_id: {thread_id}")
+    client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=user_input,
+    )
+    print(f"[DEBUG] Entrada del usuario enviada: {user_input}")
 
-        # Lógica de conversación normal con OpenAI GPT-4
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-0301",  # GPT-4 model
-            messages=session['messages']
+    # Ejecuta la conversación
+    print("[DEBUG] Ejecutando conversación con el asistente...")
+    run = client.beta.threads.runs.create(
+        assistant_id=assistant_id,
+        thread_id=thread_id
+    )
+    run_id = run.id
+    print(f"[DEBUG] Run creado con run_id: {run_id}")
+
+    # Espera a que la ejecución se complete
+    while True:
+        run = client.beta.threads.runs.retrieve(
+            thread_id=thread_id,
+            run_id=run_id
         )
-        bot_message = response.choices[0].message['content'].strip()
+        print(f"[DEBUG] Verificando estado del run: {run.status}")
+        if run.status == 'completed':
+            print("[DEBUG] Ejecución completada.")
+            break
+        time.sleep(3)  # Espera 3 segundos antes de volver a verificar
 
-        # Añadir el mensaje del bot a la lista de mensajes
-        session['messages'].append({"role": "assistant", "content": bot_message})
+    # Recupera los mensajes del hilo para obtener la respuesta del asistente
+    print("[DEBUG] Recuperando mensajes del hilo...")
+    output_messages = client.beta.threads.messages.list(
+        thread_id=thread_id
+    )
+
+    # Depuración de todos los mensajes obtenidos
+    print(f"[DEBUG] Mensajes recuperados: {output_messages.data}")
+
+    # Usa el primer mensaje devuelto para la respuesta del asistente
+    if output_messages.data:
+        print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
+        bot_message = output_messages.data[0].content[0].text.value
+        print(f"[DEBUG] Respuesta del asistente: {assistant_response}")
+    else:
+        bot_message = "Lo siento, no pude obtener una respuesta en este momento."
+        print("[DEBUG] No se encontraron mensajes del asistente.")
+
 
         return bot_message
     except Exception as e:
