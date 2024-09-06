@@ -12,7 +12,7 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # Configuración de la clave secreta
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
+app.secret_key = os.urandom(24)
 
 # Configuración de la sesión
 app.config['SESSION_TYPE'] = 'filesystem'
