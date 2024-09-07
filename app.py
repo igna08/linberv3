@@ -23,6 +23,7 @@ assistant_id = os.getenv("ASSISTANT_ID")
 
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
+thread_id = None
 
 # Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
@@ -130,18 +131,15 @@ def send_messenger_message(user_id, text):
 
 def process_user_input(user_id, user_input):
     # Usar un identificador único por usuario si es necesario
-    session_key = f'thread_id_{user_id}'
-
-    # Revisa si ya existe un thread_id en la sesión
-    if session_key not in session:
-        print(f"[DEBUG] No se encontró {session_key} en la sesión. Creando uno nuevo...")
+   if user_id not in threads:
+        print(f"[DEBUG] No se encontró thread_id para el usuario {user_id}. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
-        session[session_key] = new_thread.id
-        print(f"[DEBUG] Nuevo {session_key} creado: {session[session_key]}")
+        threads[user_id] = new_thread.id
+        print(f"[DEBUG] Nuevo thread_id creado para el usuario {user_id}: {threads[user_id]}")
     else:
-        print(f"[DEBUG] {session_key} existente encontrado en la sesión: {session[session_key]}")
+        print(f"[DEBUG] thread_id existente encontrado para el usuario {user_id}: {threads[user_id]}")
 
-    thread_id = session[session_key]
+    thread_id = threads[user_id]
 
     print(f"[DEBUG] Enviando entrada del usuario al thread_id: {thread_id}")
     client.beta.threads.messages.create(
