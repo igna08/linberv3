@@ -1,7 +1,5 @@
-
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_session import Session
 import os
 import requests
 import spacy
@@ -10,9 +8,6 @@ from openai import OpenAI
 
 # Configuración inicial
 app = Flask(__name__)
-
-# Configuración de la clave secreta
-
 
 # Configuración de CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -23,7 +18,9 @@ assistant_id = os.getenv("ASSISTANT_ID")
 
 # Cargar el modelo de lenguaje en español
 nlp = spacy.load("es_core_news_md")
-thread_id = None
+
+# Almacenamiento en memoria para los thread_id
+threads = None
 
 # Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
@@ -131,7 +128,7 @@ def send_messenger_message(user_id, text):
 
 def process_user_input(user_id, user_input):
     # Usar un identificador único por usuario si es necesario
-   if user_id not in threads:
+    if user_id not in threads:
         print(f"[DEBUG] No se encontró thread_id para el usuario {user_id}. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
         threads[user_id] = new_thread.id
@@ -187,4 +184,9 @@ def process_user_input(user_id, user_input):
 
 @app.route('/reset', methods=['POST'])
 def reset():
-    session.clear()  # Limpia todas las variables de sesión
+    global threads
+    threads = {}  # Limpia el almacenamiento de threads
+    return jsonify({"status": "success", "message": "Threads reset"}), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
