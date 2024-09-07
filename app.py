@@ -20,7 +20,7 @@ assistant_id = os.getenv("ASSISTANT_ID")
 nlp = spacy.load("es_core_news_md")
 
 # Almacenamiento en memoria para los thread_id
-threads = None
+threads = {}
 
 # Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
