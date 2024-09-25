@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import requests
-import spacy
 import time
 from openai import OpenAI
 
@@ -15,9 +14,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Configuración de OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 assistant_id = os.getenv("ASSISTANT_ID")
-
-# Cargar el modelo de lenguaje en español
-nlp = spacy.load("es_core_news_md")
 
 # Almacenamiento en memoria para los thread_id
 threads = {}
@@ -67,22 +63,29 @@ def webhook():
 def handle_whatsapp_message(message):
     user_id = message['from']
     user_text = message['text']['body']
-    response_text = process_user_input(user_id, user_text)
-    send_whatsapp_message(user_id, response_text)
+    response_data = process_user_input(user_id, user_text)
+    send_whatsapp_message(user_id, response_data)
 
 def handle_instagram_message(message):
     user_id = message['sender']['id']
     user_text = message['message']['text']
-    response_text = process_user_input(user_id, user_text)
-    send_instagram_message(user_id, response_text)
+    response_data = process_user_input(user_id, user_text)
+    send_instagram_message(user_id, response_data)
 
 def handle_messenger_message(message):
     user_id = message['sender']['id']
     user_text = message['message']['text']
-    response_text = process_user_input(user_id, user_text)
-    send_messenger_message(user_id, response_text)
+    response_data = process_user_input(user_id, user_text)
+    send_messenger_message(user_id, response_data)
 
-def send_whatsapp_message(user_id, text):
+def send_whatsapp_message(user_id, response_data):
+    for item in response_data:
+        if 'text' in item:
+            send_whatsapp_text_message(user_id, item['text'])
+        if 'image' in item:
+            send_whatsapp_image_message(user_id, item['image'])
+
+def send_whatsapp_text_message(user_id, text):
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -98,29 +101,17 @@ def send_whatsapp_message(user_id, text):
     print(response.status_code)
     print(response.json())
 
-def send_instagram_message(user_id, text):
-    url = f"https://graph.facebook.com/v19.0/{instagram_user_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {instagram_access_token}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "recipient": {"id": user_id},
-        "message": {"text": text}
-    }
-    response = requests.post(url, headers=headers, json=data)
-    print(response.status_code)
-    print(response.json())
-
-def send_messenger_message(user_id, text):
-    url = "https://graph.facebook.com/v19.0/me/messages"
+def send_whatsapp_image_message(user_id, image_url):
+    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
     }
     data = {
-        "recipient": {"id": user_id},
-        "message": {"text": text}
+        "messaging_product": "whatsapp",
+        "to": user_id,
+        "type": "image",
+        "image": {"link": image_url}
     }
     response = requests.post(url, headers=headers, json=data)
     print(response.status_code)
@@ -170,17 +161,25 @@ def process_user_input(user_id, user_input):
         thread_id=thread_id
     )
 
-    print(f"[DEBUG] Mensajes recuperados: {output_messages.data}")
-
+    response_data = []
     if output_messages.data:
-        print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
-        bot_message = output_messages.data[0].content[0].text.value
-        print(f"[DEBUG] Respuesta del asistente: {bot_message}")
-    else:
-        bot_message = "Lo siento, no pude obtener una respuesta en este momento."
-        print("[DEBUG] No se encontraron mensajes del asistente.")
+        for message in output_messages.data:
+            if 'content' in message:
+                # Separar texto y las imágenes en la respuesta
+                text_segments = [segment.text.value for segment in message.content if segment.type == 'text']
+                image_segments = [segment.image.url for segment in message.content if segment.type == 'image']
 
-    return bot_message
+                # Agregar cada segmento de texto al response_data
+                for text in text_segments:
+                    response_data.append({"text": text})
+                # Agregar cada URL de imagen al response_data
+                for image_url in image_segments:
+                    response_data.append({"image": image_url})
+
+    if not response_data:
+        response_data.append({"text": "Lo siento, no pude obtener una respuesta en este momento."})
+
+    return response_data
 
 @app.route('/reset', methods=['POST'])
 def reset():
