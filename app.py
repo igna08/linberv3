@@ -83,8 +83,9 @@ def send_whatsapp_message(user_id, response_data):
         if 'text' in item:
             send_whatsapp_text_message(user_id, item['text'])
         if 'image' in item:
-            send_whatsapp_image_message(user_id, item['image'])
+            send_whatsapp_image_or_link(user_id, item['image'])
 
+# Función para enviar mensajes de texto por WhatsApp
 def send_whatsapp_text_message(user_id, text):
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
@@ -98,9 +99,17 @@ def send_whatsapp_text_message(user_id, text):
         "text": {"body": text}
     }
     response = requests.post(url, headers=headers, json=data)
-    print(response.status_code)
+    print(f"Text message status: {response.status_code}")
     print(response.json())
 
+# Función para enviar imágenes o enlaces dependiendo del tipo
+def send_whatsapp_image_or_link(user_id, url):
+    if is_image_url(url):
+        send_whatsapp_image_message(user_id, url)
+    else:
+        send_whatsapp_text_message(user_id, f"Puedes verlo aquí: {url}")
+
+# Función para enviar una imagen por WhatsApp
 def send_whatsapp_image_message(user_id, image_url):
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
@@ -114,8 +123,13 @@ def send_whatsapp_image_message(user_id, image_url):
         "image": {"link": image_url}
     }
     response = requests.post(url, headers=headers, json=data)
-    print(response.status_code)
+    print(f"Image message status: {response.status_code}")
     print(response.json())
+
+# Función para verificar si la URL es de una imagen
+def is_image_url(url):
+    image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+    return any(url.lower().endswith(ext) for ext in image_extensions)
 
 def process_user_input(user_id, user_input):
     # Usar un identificador único por usuario si es necesario
