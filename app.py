@@ -65,15 +65,21 @@ def handle_whatsapp_message(message):
     user_id = message['from']
     user_text = message['text']['body']
     
-    # Procesar la entrada del usuario y obtener el mensaje limpio y las URLs de imágenes
-    response_text, image_urls = process_user_input(user_id, user_text)
+    # Procesar la entrada del usuario y obtener las partes de texto e imágenes
+    message_parts = process_user_input(user_id, user_text)
     
-    # Enviar el mensaje de texto sin las URLs de imágenes
-    send_whatsapp_message(user_id, response_text)
-    
-    # Enviar las imágenes una por una
-    for image_url in image_urls:
-        send_whatsapp_image(user_id, image_url)
+    # Enviar las partes del mensaje (texto o imágenes) en orden
+    for part in message_parts:
+        if is_image_url(part):
+            # Si es una URL de imagen, enviar la imagen
+            send_whatsapp_image(user_id, part)
+        else:
+            # Si es texto, enviar el mensaje de texto
+            send_whatsapp_message(user_id, part)
+
+def is_image_url(text):
+    """Verifica si el texto es una URL de imagen."""
+    return re.match(r'https?://[^\s]+(?:jpg|jpeg|png|gif)', text)
 
 def handle_instagram_message(message):
     user_id = message['sender']['id']
@@ -186,21 +192,21 @@ def process_user_input(user_id, user_input):
     if output_messages.data:
         bot_message = output_messages.data[0].content[0].text.value
         
-        # Extraer URLs de imágenes
-        image_urls = extract_all_image_urls_from_text(bot_message)
-
-        # Eliminar las URLs de imágenes del texto
-        cleaned_message = remove_image_urls_from_text(bot_message)
+        # Separar el texto por las URLs de imágenes
+        message_parts = split_text_and_urls(bot_message)
     else:
-        cleaned_message = "Lo siento, no pude obtener una respuesta en este momento."
-        image_urls = []
+        message_parts = ["Lo siento, no pude obtener una respuesta en este momento."]
 
-    return cleaned_message, image_urls
+    return message_parts
 
-def extract_all_image_urls_from_text(text):
-    """Extrae todas las URLs de imágenes del texto"""
-    url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
-    return re.findall(url_pattern, text)
+def split_text_and_urls(text):
+    """
+    Separa el texto en partes y URLs de imágenes para que puedan ser enviadas en el mismo orden.
+    Devuelve una lista donde cada parte es una cadena de texto o una URL de imagen.
+    """
+    url_pattern = r'(https?://[^\s]+(?:jpg|jpeg|png|gif))'
+    parts = re.split(url_pattern, text)
+    return [part.strip() for part in parts if part.strip()]
 
 def remove_image_urls_from_text(text):
     """Elimina las URLs de imágenes del texto"""
