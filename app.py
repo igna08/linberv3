@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import requests
 import time
+import re
 from openai import OpenAI
 
 # Configuración inicial
@@ -143,77 +144,57 @@ def send_messenger_message(user_id, text):
     print(response.json())
 
 def process_user_input(user_id, user_input):
-    # Usar un identificador único por usuario si es necesario
     if user_id not in threads:
-        print(f"[DEBUG] No se encontró thread_id para el usuario {user_id}. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
         threads[user_id] = new_thread.id
-        print(f"[DEBUG] Nuevo thread_id creado para el usuario {user_id}: {threads[user_id]}")
-    else:
-        print(f"[DEBUG] thread_id existente encontrado para el usuario {user_id}: {threads[user_id]}")
 
     thread_id = threads[user_id]
 
-    print(f"[DEBUG] Enviando entrada del usuario al thread_id: {thread_id}")
     client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=user_input,
     )
-    print(f"[DEBUG] Entrada del usuario enviada: {user_input}")
 
-    print("[DEBUG] Ejecutando conversación con el asistente...")
     run = client.beta.threads.runs.create(
         assistant_id=assistant_id,
         thread_id=thread_id
     )
     run_id = run.id
-    print(f"[DEBUG] Run creado con run_id: {run_id}")
 
     while True:
         run = client.beta.threads.runs.retrieve(
             thread_id=thread_id,
             run_id=run_id
         )
-        print(f"[DEBUG] Verificando estado del run: {run.status}")
         if run.status == 'completed':
-            print("[DEBUG] Ejecución completada.")
             break
         time.sleep(3)
 
-    print("[DEBUG] Recuperando mensajes del hilo...")
     output_messages = client.beta.threads.messages.list(
         thread_id=thread_id
     )
 
-    print(f"[DEBUG] Mensajes recuperados: {output_messages.data}")
-
     if output_messages.data:
-        print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
         bot_message = output_messages.data[0].content[0].text.value
-        # Aquí puedes verificar si hay una URL de imagen en la respuesta
-        image_url = extract_image_url(output_messages.data[0].content)
-        print(f"[DEBUG] Respuesta del asistente: {bot_message}")
+        image_url = extract_image_url_from_text(bot_message)  # Extrae la URL de imagen del texto
     else:
         bot_message = "Lo siento, no pude obtener una respuesta en este momento."
-        print("[DEBUG] No se encontraron mensajes del asistente.")
         image_url = None
 
     return bot_message, image_url
 
-def extract_image_url(content):
-    # Implementa la lógica para extraer la URL de una imagen de `content`
-    # Esto puede variar según cómo se formateen las respuestas de tu asistente.
-    for item in content:
-        if 'image_url' in item:
-            return item['image_url']  # Cambia esto según tu formato
-    return None
+def extract_image_url_from_text(text):
+    # Usa una expresión regular para buscar URLs de imagen
+    url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
+    match = re.search(url_pattern, text)
+    return match.group(0) if match else None
 
 @app.route('/reset', methods=['POST'])
 def reset():
     global threads
     threads = {}  # Limpia el almacenamiento de threads
-    return jsonify({"status": "success", "message": "Threads reset"}), 200
+
 
 if __name__ == "__main__":
     app.run(debug=True)
