@@ -148,7 +148,7 @@ def send_messenger_message(user_id, text):
         "recipient": {"id": user_id},
         "message": {"text": text}
     }
-response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
     print(response.status_code)
     print(response.json())
 
