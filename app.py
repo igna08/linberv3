@@ -204,18 +204,29 @@ def split_text_and_urls(text):
     Separa el texto en partes y URLs de imágenes, eliminando el texto adicional que acompaña a las URLs de imágenes.
     Devuelve una lista donde cada parte es una cadena de texto o una URL de imagen.
     """
-    # Ajustar el patrón para detectar URLs de imágenes
+    # Ajustar el patrón para detectar URLs de imágenes, ignorando parámetros como ?v=1234
     url_pattern = r'(https?://[^\s]+(?:jpg|jpeg|png|gif))'
     
     # Eliminar cualquier formato markdown que acompañe a las URLs
     text = re.sub(r'!\[.*?\]\(', '', text)  # Elimina el texto ![alt text](
     text = re.sub(r'\)', '', text)  # Elimina los paréntesis de cierre )
 
-    # Separar el texto por URLs de imágenes
+    # Separar el texto por URLs de imágenes, capturando solo la parte de la URL antes de cualquier parámetro
     parts = re.split(url_pattern, text)
     
+    # Limpiar las URLs de imágenes de cualquier parámetro adicional (como ?v=...)
+    cleaned_parts = []
+    for part in parts:
+        if is_image_url(part):
+            # Si es una URL de imagen, eliminar los parámetros adicionales después de la extensión
+            part = re.sub(r'\?.*$', '', part)
+        cleaned_parts.append(part.strip())
+
     # Retorna solo las partes que no sean vacías
-    return [part.strip() for part in parts if part.strip()]
+    return [part for part in cleaned_parts if part]
+
+
+
 def remove_image_urls_from_text(text):
     """Elimina las URLs de imágenes del texto"""
     url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
