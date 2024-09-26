@@ -4,7 +4,6 @@ import os
 import requests
 import time
 from openai import OpenAI
-import re  # Importar la librería re para expresiones regulares
 
 # Configuración inicial
 app = Flask(__name__)
@@ -64,32 +63,12 @@ def webhook():
 def handle_whatsapp_message(message):
     user_id = message['from']
     user_text = message['text']['body']
-    response_text = process_user_input(user_id, user_text)
-    # Comprobar si la respuesta es una URL de imagen
-    if is_image_url(response_text):
-        send_whatsapp_image(user_id, response_text)
-    else:
-        send_whatsapp_message(user_id, response_text)
-
-def is_image_url(url):
-    # Expresión regular para validar URLs de imágenes
-    return re.match(r'https?://\S+\.(jpg|jpeg|png|gif)', url) is not None
-
-def send_whatsapp_image(user_id, image_url):
-    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "messaging_product": "whatsapp",
-        "to": user_id,
-        "type": "image",
-        "image": {"link": image_url}
-    }
-    response = requests.post(url, headers=headers, json=data)
-    print(response.status_code)
-    print(response.json())
+    response_text, image_url = process_user_input(user_id, user_text)
+    
+    send_whatsapp_message(user_id, response_text)
+    
+    if image_url:  # Si hay una URL de imagen, enviarla como mensaje de imagen
+        send_whatsapp_image(user_id, image_url)
 
 def handle_instagram_message(message):
     user_id = message['sender']['id']
@@ -114,6 +93,22 @@ def send_whatsapp_message(user_id, text):
         "to": user_id,
         "type": "text",
         "text": {"body": text}
+    }
+    response = requests.post(url, headers=headers, json=data)
+    print(response.status_code)
+    print(response.json())
+
+def send_whatsapp_image(user_id, image_url):
+    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messaging_product": "whatsapp",
+        "to": user_id,
+        "type": "image",
+        "image": {"link": image_url}
     }
     response = requests.post(url, headers=headers, json=data)
     print(response.status_code)
@@ -148,6 +143,7 @@ def send_messenger_message(user_id, text):
     print(response.json())
 
 def process_user_input(user_id, user_input):
+    # Usar un identificador único por usuario si es necesario
     if user_id not in threads:
         print(f"[DEBUG] No se encontró thread_id para el usuario {user_id}. Creando uno nuevo...")
         new_thread = client.beta.threads.create()
@@ -195,12 +191,23 @@ def process_user_input(user_id, user_input):
     if output_messages.data:
         print(f"[DEBUG] Primer mensaje del asistente encontrado: {output_messages.data[0]}")
         bot_message = output_messages.data[0].content[0].text.value
+        # Aquí puedes verificar si hay una URL de imagen en la respuesta
+        image_url = extract_image_url(output_messages.data[0].content)
         print(f"[DEBUG] Respuesta del asistente: {bot_message}")
     else:
         bot_message = "Lo siento, no pude obtener una respuesta en este momento."
         print("[DEBUG] No se encontraron mensajes del asistente.")
+        image_url = None
 
-    return bot_message
+    return bot_message, image_url
+
+def extract_image_url(content):
+    # Implementa la lógica para extraer la URL de una imagen de `content`
+    # Esto puede variar según cómo se formateen las respuestas de tu asistente.
+    for item in content:
+        if 'image_url' in item:
+            return item['image_url']  # Cambia esto según tu formato
+    return None
 
 @app.route('/reset', methods=['POST'])
 def reset():
@@ -209,10 +216,4 @@ def reset():
     return jsonify({"status": "success", "message": "Threads reset"}), 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
-
-    return jsonify({"status": "success", "message": "Threads reset"}), 200
-
-if __name__ == "__main__":
-    print("[DEBUG] Starting Flask app")
     app.run(debug=True)
