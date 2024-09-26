@@ -64,11 +64,15 @@ def webhook():
 def handle_whatsapp_message(message):
     user_id = message['from']
     user_text = message['text']['body']
-    response_text, image_url = process_user_input(user_id, user_text)
     
+    # Procesar la entrada del usuario y obtener el mensaje limpio y las URLs de imágenes
+    response_text, image_urls = process_user_input(user_id, user_text)
+    
+    # Enviar el mensaje de texto sin las URLs de imágenes
     send_whatsapp_message(user_id, response_text)
     
-    if image_url:  # Si hay una URL de imagen, enviarla como mensaje de imagen
+    # Enviar las imágenes una por una
+    for image_url in image_urls:
         send_whatsapp_image(user_id, image_url)
 
 def handle_instagram_message(message):
@@ -150,18 +154,21 @@ def process_user_input(user_id, user_input):
 
     thread_id = threads[user_id]
 
+    # Enviar el mensaje del usuario al asistente
     client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=user_input,
     )
 
+    # Ejecutar el asistente
     run = client.beta.threads.runs.create(
         assistant_id=assistant_id,
         thread_id=thread_id
     )
     run_id = run.id
 
+    # Esperar hasta que la ejecución esté completa
     while True:
         run = client.beta.threads.runs.retrieve(
             thread_id=thread_id,
@@ -171,24 +178,35 @@ def process_user_input(user_id, user_input):
             break
         time.sleep(3)
 
+    # Obtener el mensaje de respuesta del bot
     output_messages = client.beta.threads.messages.list(
         thread_id=thread_id
     )
 
     if output_messages.data:
         bot_message = output_messages.data[0].content[0].text.value
-        image_url = extract_image_url_from_text(bot_message)  # Extrae la URL de imagen del texto
+        
+        # Extraer URLs de imágenes
+        image_urls = extract_all_image_urls_from_text(bot_message)
+
+        # Eliminar las URLs de imágenes del texto
+        cleaned_message = remove_image_urls_from_text(bot_message)
     else:
-        bot_message = "Lo siento, no pude obtener una respuesta en este momento."
-        image_url = None
+        cleaned_message = "Lo siento, no pude obtener una respuesta en este momento."
+        image_urls = []
 
-    return bot_message, image_url
+    return cleaned_message, image_urls
 
-def extract_image_url_from_text(text):
-    # Usa una expresión regular para buscar URLs de imagen
+def extract_all_image_urls_from_text(text):
+    """Extrae todas las URLs de imágenes del texto"""
     url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
-    match = re.search(url_pattern, text)
-    return match.group(0) if match else None
+    return re.findall(url_pattern, text)
+
+def remove_image_urls_from_text(text):
+    """Elimina las URLs de imágenes del texto"""
+    url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
+    return re.sub(url_pattern, '', text).strip()
+
 
 @app.route('/reset', methods=['POST'])
 def reset():
