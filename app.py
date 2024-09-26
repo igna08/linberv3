@@ -68,7 +68,7 @@ def handle_whatsapp_message(message):
     # Procesar la entrada del usuario y obtener las partes de texto e imágenes
     message_parts = process_user_input(user_id, user_text)
     
-    # Enviar las partes del mensaje (texto o imágenes) en el orden correcto
+    # Enviar las partes del mensaje (texto o imágenes) en orden
     for part in message_parts:
         if is_image_url(part):
             # Si es una URL de imagen, enviar la imagen
@@ -204,11 +204,8 @@ def split_text_and_urls(text):
     Separa el texto en partes y URLs de imágenes para que puedan ser enviadas en el mismo orden.
     Devuelve una lista donde cada parte es una cadena de texto o una URL de imagen.
     """
-    # Ajustar el patrón para detectar imágenes.
     url_pattern = r'(https?://[^\s]+(?:jpg|jpeg|png|gif))'
     parts = re.split(url_pattern, text)
-    
-    # Retorna solo las partes que no sean vacías
     return [part.strip() for part in parts if part.strip()]
 
 def remove_image_urls_from_text(text):
