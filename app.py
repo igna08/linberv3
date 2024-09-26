@@ -201,13 +201,21 @@ def process_user_input(user_id, user_input):
 
 def split_text_and_urls(text):
     """
-    Separa el texto en partes y URLs de imágenes para que puedan ser enviadas en el mismo orden.
+    Separa el texto en partes y URLs de imágenes, eliminando el texto adicional que acompaña a las URLs de imágenes.
     Devuelve una lista donde cada parte es una cadena de texto o una URL de imagen.
     """
+    # Ajustar el patrón para detectar URLs de imágenes
     url_pattern = r'(https?://[^\s]+(?:jpg|jpeg|png|gif))'
-    parts = re.split(url_pattern, text)
-    return [part.strip() for part in parts if part.strip()]
+    
+    # Eliminar cualquier formato markdown que acompañe a las URLs
+    text = re.sub(r'!\[.*?\]\(', '', text)  # Elimina el texto ![alt text](
+    text = re.sub(r'\)', '', text)  # Elimina los paréntesis de cierre )
 
+    # Separar el texto por URLs de imágenes
+    parts = re.split(url_pattern, text)
+    
+    # Retorna solo las partes que no sean vacías
+    return [part.strip() for part in parts if part.strip()]
 def remove_image_urls_from_text(text):
     """Elimina las URLs de imágenes del texto"""
     url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
