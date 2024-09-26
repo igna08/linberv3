@@ -18,6 +18,7 @@ assistant_id = os.getenv("ASSISTANT_ID")
 
 # Almacenamiento en memoria para los thread_id
 threads = {}
+last_message_sent = {}  # Almacenará el último mensaje enviado por cada usuario
 
 # Variables de entorno para WhatsApp e Instagram
 access_token = os.getenv('ACCESS_TOKEN')
@@ -71,10 +72,8 @@ def handle_whatsapp_message(message):
     # Enviar las partes del mensaje (texto o imágenes) en orden
     for part in message_parts:
         if is_image_url(part):
-            # Si es una URL de imagen, enviar la imagen
             send_whatsapp_image(user_id, part)
         else:
-            # Si es texto, enviar el mensaje de texto
             send_whatsapp_message(user_id, part)
 
 def is_image_url(text):
@@ -149,7 +148,7 @@ def send_messenger_message(user_id, text):
         "recipient": {"id": user_id},
         "message": {"text": text}
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json(data))
     print(response.status_code)
     print(response.json())
 
@@ -192,6 +191,12 @@ def process_user_input(user_id, user_input):
     if output_messages.data:
         bot_message = output_messages.data[0].content[0].text.value
         
+        # Verifica si el mensaje ya fue enviado
+        if last_message_sent.get(user_id) == bot_message:
+            return ["El mismo mensaje fue repetido, omitiendo respuesta."]
+        else:
+            last_message_sent[user_id] = bot_message
+
         # Separar el texto por las URLs de imágenes
         message_parts = split_text_and_urls(bot_message)
     else:
@@ -200,44 +205,28 @@ def process_user_input(user_id, user_input):
     return message_parts
 
 def split_text_and_urls(text):
-    """
-    Separa el texto en partes y URLs de imágenes, eliminando el texto adicional que acompaña a las URLs de imágenes.
-    Devuelve una lista donde cada parte es una cadena de texto o una URL de imagen.
-    """
-    # Ajustar el patrón para detectar URLs de imágenes, ignorando parámetros como ?v=1234
     url_pattern = r'(https?://[^\s]+(?:jpg|jpeg|png|gif))'
-    
-    # Eliminar cualquier formato markdown que acompañe a las URLs
-    text = re.sub(r'!\[.*?\]\(', '', text)  # Elimina el texto ![alt text](
-    text = re.sub(r'\)', '', text)  # Elimina los paréntesis de cierre )
-
-    # Separar el texto por URLs de imágenes, capturando solo la parte de la URL antes de cualquier parámetro
+    text = re.sub(r'!\[.*?\]\(', '', text)
+    text = re.sub(r'\)', '', text)
     parts = re.split(url_pattern, text)
-    
-    # Limpiar las URLs de imágenes de cualquier parámetro adicional (como ?v=...)
+
     cleaned_parts = []
     for part in parts:
         if is_image_url(part):
-            # Si es una URL de imagen, eliminar los parámetros adicionales después de la extensión
             part = re.sub(r'\?.*$', '', part)
         cleaned_parts.append(part.strip())
 
-    # Retorna solo las partes que no sean vacías
     return [part for part in cleaned_parts if part]
-
-
-
-def remove_image_urls_from_text(text):
-    """Elimina las URLs de imágenes del texto"""
-    url_pattern = r'https?://[^\s]+(?:jpg|jpeg|png|gif)'
-    return re.sub(url_pattern, '', text).strip()
 
 
 @app.route('/reset', methods=['POST'])
 def reset():
     global threads
-    threads = {}  # Limpia el almacenamiento de threads
+    threads = {}
+    global last_message_sent
+    last_message_sent = {}  # Limpia el historial de últimos mensajes enviados
 
 
 if __name__ == "__main__":
     app.run(debug=True)
+
