@@ -31,6 +31,9 @@ WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 # Leer el contexto inicial desde el archivo de texto
 with open('initial_context.txt', 'r') as file:
     initial_context = file.read().strip()
+@app.route('/')
+def home():
+    return "Bienvenido a la API de Webhook!", 200
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
