@@ -5,6 +5,7 @@ import requests
 import time
 import re
 from openai import OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Configuración inicial
 app = Flask(__name__)
@@ -13,7 +14,6 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configuración de OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 assistant_id = os.getenv("ASSISTANT_ID")
 
 # Almacenamiento en memoria para los thread_id
@@ -28,9 +28,7 @@ instagram_user_id = os.getenv('INSTAGRAM_USER_ID')
 instagram_access_token = os.getenv('INSTAGRAM_ACCESS_TOKEN')
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 
-# Leer el contexto inicial desde el archivo de texto
-with open('initial_context.txt', 'r') as file:
-    initial_context = file.read().strip()
+
 @app.route('/')
 def home():
     return "Bienvenido a la API de Webhook!", 200
